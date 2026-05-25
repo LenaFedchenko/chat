@@ -1,2 +1,3 @@
 from .app import user
-from .views import render_register
+from .views import render_register, render_login
+from .models import User

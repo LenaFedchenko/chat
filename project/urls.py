@@ -18,3 +18,8 @@ user.user.add_url_rule(
     view_func = user.render_login,
     methods = ["GET", "POST"]
 )
+user.user.add_url_rule(
+    rule = '/check_email/',
+    view_func = user.check_email,
+    methods = ["GET", "POST"]
+)

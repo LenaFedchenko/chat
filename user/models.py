@@ -11,5 +11,5 @@ class User(DATABASE.Model, UserMixin):
     user_name = DATABASE.Column(DATABASE.String(50), nullable=True, unique=True)
     date_of_birth = DATABASE.Column(DATABASE.String(8), nullable=True)
     gender = DATABASE.Column(DATABASE.String(10), nullable=True)
-
+    is_verify = DATABASE.Column(DATABASE.Boolean, nullable=True, default=False)
 

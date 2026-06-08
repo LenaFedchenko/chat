@@ -23,3 +23,8 @@ user.user.add_url_rule(
     view_func = user.check_email,
     methods = ["GET", "POST"]
 )
+user.user.add_url_rule(
+    rule = '/get_data/',
+    view_func = user.get_data,
+    methods = ["POST"]
+)

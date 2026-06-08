@@ -46,3 +46,27 @@ def check_email():
         DATABASE.session.commit()
         flask_login.login_user(user)
         return flask.redirect("/")
+
+def get_data():
+    if flask.request.method == "POST":
+        first_name = flask.request.form["first_name"]
+        last_name = flask.request.form["last_name"]
+        username = flask.request.form["username"]
+        gender = flask.request.form["gender"]
+        birth_date = flask.request.form["birth_date"]
+        
+        user_id = flask_login.current_user.id
+        user = User.query.filter_by(id=user_id).first()
+        if user is None:
+            return flask.jsonify({
+                "success": False
+            })
+        user.name = first_name
+        user.second_name = last_name
+        user.user_name = username
+        user.gender = gender
+        user.date_of_birth = birth_date
+
+        DATABASE.session.commit()
+        return flask.redirect("/")
+        

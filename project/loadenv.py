@@ -1,6 +1,6 @@
 import os, dotenv
 
-ENV_PATH = os.path.abspath(os.path.join(__file__, "..", "..", "..", ".env"))
+ENV_PATH = os.path.abspath(os.path.join(__file__, "..", "..", ".env"))
 MIGRATIONS_PATH = os.path.abspath(os.path.join(__file__, "..", "migrations"))
 
 def execute():

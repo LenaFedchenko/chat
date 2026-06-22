@@ -4,5 +4,5 @@ def render_chat():
     if not is_authenticated:
         return flask.redirect("/login")
     else:
-        return flask.render_template("chat.html")
+        return flask.render_template("chat.html", is_authenticated=is_authenticated)
     # return flask.render_template("chat.html")

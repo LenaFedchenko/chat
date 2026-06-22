@@ -1,0 +1,65 @@
+<div class="header">
+    <div class="logo">
+        <img src="{{ url_for('chat.static', filename='images/logo.svg') }}" alt="">
+        <p>Chat</p>
+    </div>
+    <img src="{{ url_for('chat.static', filename='images/notif.svg') }}" alt="">
+    <img id="settings_btn" src="{{ url_for('chat.static', filename='images/settings.svg') }}" alt="">
+    <img src="{{ url_for('chat.static', filename='images/avatar.png') }}" alt="">
+</div>
+<!-- модалка -->
+<div style="display: none;" class="modal">
+    <div>
+        <p>Налаштування</p>
+        <img src="{{ url_for('static', filename='images/close.png') }}" alt="" class="img-set">
+    </div>
+    <div>
+        <p>Зображення профілю</p>
+        <div>
+            <img src="{{ url_for('chat.static', filename='images/avatar.png') }}" alt="">
+            <button type="button">
+                <img src="{{ url_for('static', filename='images/repeat.png') }}" alt="">
+                Замінити
+            </button>
+            <button type="button">
+                <img src="{{ url_for('static', filename='images/trash.png') }}" alt="">
+                Видалити
+            </button>
+        </div>
+    </div>
+    <form action="/get_data/" method="post">
+        <label>
+            Ім’я
+            <input type="text" name="first_name" minlength="2">
+        </label>
+        <label>
+            Прізвище
+            <input type="text" name="last_name" minlength="3">
+        </label>
+        <label>
+            Ім’я користувача
+            <input type="text" name="username" minlength="2">
+        </label>
+        <label>
+            Стать
+            <select name="gender">
+                <option value="female" name= "gender">Жіноча</option>
+                <option value="male" name= "gender">Чоловіча</option>
+            </select>
+        </label>
+        <label>
+            Вік
+            <input type="date" name="birth_date">
+        </label>
+
+        <a href="/del-user/" class="btn-sel">
+            <img src="{{ url_for('static', filename='images/trash.png') }}" alt="">
+            Видалити аккаунт
+        </a>
+
+        <div class="btns">
+            <button type="button" class="btn-1">Скасувати</button>
+            <button type="submit" class="btn-2">Зберегти</button>
+        </div>
+    </form>
+</div>

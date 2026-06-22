@@ -13,3 +13,8 @@ class User(DATABASE.Model, UserMixin):
     gender = DATABASE.Column(DATABASE.String(10), nullable=True)
     is_verify = DATABASE.Column(DATABASE.Boolean, nullable=True, default=False)
 
+    chats = DATABASE.relationship(
+        "Chat",
+        secondary= "user_chat_link",
+        back_populates= "users"
+    )

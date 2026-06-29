@@ -13,6 +13,7 @@
     justify-content: center;
     gap: 32px;
     padding-top: 8px;
+    position: relative;
 }
 .content-auth h1{
     font-family: var(--font-family);
@@ -69,13 +70,35 @@ color: #faf8ff;
 }
 
 
+.auth_btn {
+    display: flex;
+    width: 100%;
+    justify-content: end;
+    position: absolute;
+    bottom: 90%;
+    right: 50px;
+}
 
 
+.auth_btn button{
+    border: 1px solid #e4e4e7;
+    border-radius: 6px;
+    padding: 8px 16px;
+    width: auto;
+    height: 36px;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    background: #fff;
+}
 
 
-
-
-
+.auth_btn button a {
+    text-decoration: none;
+    font-family: var(--font-family);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 143%;
+    color: #0d133f;
+}
 
 /* http://meyerweb.com/eric/tools/css/reset/ 
    v2.0 | 20110126
@@ -128,3 +151,4 @@ table {
 	border-collapse: collapse;
 	border-spacing: 0;
 }
+

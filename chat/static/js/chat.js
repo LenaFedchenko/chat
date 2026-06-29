@@ -1,77 +1,19 @@
 const chatBlock = document.querySelector("[data-chat-app]");
 
-const startChats = [
-    {
-        id: 1,
-        title: "Dream Team",
-        lastMessage: "I just shared the new mockups in Figma",
-        time: "15m ago",
-        unread: 0,
-        color: "purple",
-        messages: [
-            { name: "Diana", avatar: "D", time: "9:18 AM", text: "I just shared the new mockups in Figma." },
-            { name: "You", avatar: "Y", time: "9:20 AM", text: "Great, I'll review them before lunch.", my: true }
-        ]
-    },
-    {
-        id: 2,
-        title: "General Chat",
-        lastMessage: "Hey everyone! How is the project going?",
-        time: "2m ago",
-        unread: 3,
-        color: "blue",
-        messages: [
-            { name: "Alex", avatar: "A", time: "9:24 AM", text: "Hey everyone! Good morning!" },
-            { name: "Maria", avatar: "M", time: "9:26 AM", text: "Morning Alex! How was your weekend?", color: "purple" },
-            { name: "Alex", avatar: "A", time: "9:26 AM", text: "It was great! I finished the new feature implementation and it's ready for review." },
-            { name: "John", avatar: "J", time: "9:29 AM", text: "Nice work Alex! I'll take a look at it this afternoon.", color: "green" },
-            { name: "Kate", avatar: "K", time: "9:44 AM", text: "I just shared the updated design files in Figma. The new color scheme looks amazing! What do you all think?", color: "orange" },
-            { name: "You", avatar: "Y", time: "9:40 AM", text: "Looks great! I'll start working on the next step.", my: true }
-        ]
-    },
-    {
-        id: 3,
-        title: "Design Team",
-        lastMessage: "The API integration is complete",
-        time: "1h ago",
-        unread: 0,
-        color: "red",
-        messages: [
-            { name: "Emma", avatar: "E", time: "8:55 AM", text: "The API integration is complete." },
-            { name: "You", avatar: "Y", time: "9:02 AM", text: "Perfect, thanks for the update.", my: true }
-        ]
-    },
-    {
-        id: 4,
-        title: "Marketing Team",
-        lastMessage: "Great work on the campaign launch!",
-        time: "1h ago",
-        unread: 7,
-        color: "green",
-        messages: [
-            { name: "Michael", avatar: "M", time: "8:20 AM", text: "Great work on the campaign launch!" }
-        ]
-    },
-    {
-        id: 5,
-        title: "Random",
-        lastMessage: "Anyone up for lunch?",
-        time: "5h ago",
-        unread: 2,
-        color: "navy",
-        messages: [
-            { name: "Sarah", avatar: "S", time: "12:05 PM", text: "Anyone up for lunch?" }
-        ]
-    }
-];
+let chats = [];
+let otherChats = [];
+let activeChat = null;
+let deleteChatId = null;
+let socket = null;
+let socketConnected = false;
+let pendingJoinChat = null;
+let currentUserId = null;
 
 const colors = ["blue", "purple", "green", "orange", "navy"];
 
-let chats = startChats.slice();
-let activeChat = 2;
-let deleteChatId = null;
-
 const chatList = chatBlock.querySelector("[data-chat-list]");
+const availableWrap = chatBlock.querySelector("[data-available-wrap]");
+const availableList = chatBlock.querySelector("[data-available-list]");
 const chatSearch = chatBlock.querySelector("[data-chat-search]");
 const loading = chatBlock.querySelector("[data-loading-state]");
 const emptyBlock = chatBlock.querySelector("[data-empty-state]");
@@ -82,6 +24,7 @@ const messagesBlock = chatBlock.querySelector("[data-message-list]");
 const createForm = chatBlock.querySelector("[data-create-form]");
 const createError = chatBlock.querySelector("[data-create-error]");
 const messageForm = chatBlock.querySelector("[data-message-form]");
+const messageInput = chatBlock.querySelector("[data-message-input]");
 
 function cleanText(text) {
     return String(text || "")
@@ -103,11 +46,20 @@ function getLetters(name) {
         .toUpperCase();
 }
 
-function getChatText(chat) {
-    return chat.lastMessage || "Повідомлень ще немає";
+function request(url, options = {}) {
+    return fetch(url, {
+        headers: {
+            "Content-Type": "application/json"
+        },
+        ...options
+    }).then((response) => response.json());
 }
 
-function getChats() {
+function getChatText(chat) {
+    return chat.lastMessage || "Повідомлень поки немає";
+}
+
+function getFilteredChats() {
     const value = chatSearch.value.trim().toLowerCase();
 
     if (!value) {
@@ -115,15 +67,12 @@ function getChats() {
     }
 
     return chats.filter((chat) => {
-        const title = chat.title.toLowerCase();
-        const lastMessage = getChatText(chat).toLowerCase();
-
-        return title.includes(value) || lastMessage.includes(value);
+        return chat.title.toLowerCase().includes(value) || getChatText(chat).toLowerCase().includes(value);
     });
 }
 
 function drawChats() {
-    const filteredChats = getChats();
+    const filteredChats = getFilteredChats();
     const hasSearch = chatSearch.value.trim() !== "";
 
     chatList.innerHTML = "";
@@ -131,30 +80,46 @@ function drawChats() {
     notFound.hidden = chats.length === 0 || filteredChats.length !== 0;
     chatList.hidden = filteredChats.length === 0;
 
-    filteredChats.forEach((chat) => {
-        const item = document.createElement("li");
-        const activeClass = chat.id === activeChat ? " active" : "";
-
-        item.className = `chat-item${activeClass}`;
-        item.dataset.chatId = chat.id;
-
-        item.innerHTML = `
-            <span class="chat-avatar ${chat.color || "blue"}">${getLetters(chat.title)}</span>
-            <button class="chat-open" type="button" data-select-chat="${chat.id}">
-                <span class="chat-name-line">
-                    <strong>${cleanText(chat.title)}</strong>
-                    <span class="chat-time">${cleanText(chat.time || "")}</span>
-                </span>
-                <span class="chat-preview">${cleanText(getChatText(chat))}</span>
-            </button>
-            <span class="chat-meta">
-                ${chat.unread ? `<span class="unread-badge">${chat.unread}</span>` : ""}
-                <button class="delete-chat-button" type="button" data-delete-chat="${chat.id}" aria-label="Видалити ${cleanText(chat.title)}">×</button>
-            </span>
-        `;
-
-        chatList.appendChild(item);
+    filteredChats.forEach((chat, index) => {
+        chatList.appendChild(makeChatItem(chat, index, true));
     });
+
+    drawAvailableChats();
+}
+
+function drawAvailableChats() {
+    availableList.innerHTML = "";
+    availableWrap.hidden = otherChats.length === 0;
+
+    otherChats.forEach((chat, index) => {
+        availableList.appendChild(makeChatItem(chat, index, false));
+    });
+}
+
+function makeChatItem(chat, index, isMember) {
+    const item = document.createElement("li");
+    const activeClass = chat.id === activeChat ? " active" : "";
+    const color = colors[index % colors.length];
+
+    item.className = `chat-item${activeClass}`;
+    item.dataset.chatId = chat.id;
+
+    item.innerHTML = `
+        <span class="chat-avatar ${color}">${cleanText(getLetters(chat.title))}</span>
+        <button class="chat-open" type="button" data-select-chat="${chat.id}" ${isMember ? "" : "disabled"}>
+            <span class="chat-name-line">
+                <strong>${cleanText(chat.title)}</strong>
+                <span class="chat-time">${cleanText(chat.time || "")}</span>
+            </span>
+            <span class="chat-preview">${cleanText(getChatText(chat))}</span>
+        </button>
+        <span class="chat-meta">
+            ${isMember && chat.isOwner ? `<button class="delete-chat-button" type="button" data-delete-chat="${chat.id}" aria-label="Видалити ${cleanText(chat.title)}">⌫</button>` : ""}
+            ${!isMember ? `<button class="join-chat-button" type="button" data-join-chat="${chat.id}">Увійти</button>` : ""}
+        </span>
+    `;
+
+    return item;
 }
 
 function drawMessages() {
@@ -166,37 +131,67 @@ function drawMessages() {
         chatTitle.textContent = "Чат не вибрано";
         chatInfo.textContent = "Створіть чат або виберіть його зі списку";
         messagesBlock.innerHTML = '<div class="empty-state"><p>Активного чату поки немає.</p></div>';
+        messageInput.disabled = true;
         return;
     }
 
     const messages = chat.messages || [];
 
     chatTitle.textContent = chat.title;
-    chatInfo.textContent = `${messages.length} повідомлень`;
+    chatInfo.textContent = `${chat.usersCount || 1} учасників · код ${chat.word}`;
+    messageInput.disabled = false;
 
     messages.forEach((message) => {
-        const messageItem = document.createElement("article");
-        const messageClass = message.my ? " own" : "";
-
-        messageItem.className = `message${messageClass}`;
-        messageItem.innerHTML = `
-            <span class="message-avatar ${message.color || "blue"}">${cleanText(message.avatar || "?")}</span>
-            <div class="message-body">
-                <div class="message-head">
-                    <strong>${cleanText(message.name || "User")}</strong>
-                    <time>${cleanText(message.time || "")}</time>
-                </div>
-                <p>${cleanText(message.text || "")}</p>
-            </div>
-        `;
-
-        messagesBlock.appendChild(messageItem);
+        messagesBlock.appendChild(makeMessage(message));
     });
+
+    messagesBlock.scrollTop = messagesBlock.scrollHeight;
+}
+
+function makeMessage(message) {
+    const messageItem = document.createElement("article");
+    const messageClass = message.my ? " own" : "";
+
+    messageItem.className = `message${messageClass}`;
+    messageItem.innerHTML = `
+        <span class="message-avatar blue">${cleanText(message.avatar || "?")}</span>
+        <div class="message-body">
+            <div class="message-head">
+                <strong>${cleanText(message.name || "User")}</strong>
+                <time>${cleanText(message.time || "")}</time>
+            </div>
+            <p>${cleanText(message.text || "")}</p>
+        </div>
+    `;
+
+    return messageItem;
+}
+
+function drawUsers() {
+    const chat = chats.find((item) => item.id === activeChat);
+    const usersList = chatBlock.querySelector(".users-list");
+    const usersTitle = chatBlock.querySelector(".users-heading span");
+
+    if (!chat || !usersList) {
+        return;
+    }
+
+    usersTitle.textContent = `${chat.members.length} користувачів`;
+    usersList.innerHTML = chat.members.map((user) => `
+        <li>
+            <span class="mini-avatar blue">${cleanText(user.avatar)}</span>
+            <div>
+                <strong>${cleanText(user.name)}</strong>
+                <small>у чаті</small>
+            </div>
+        </li>
+    `).join("");
 }
 
 function drawPage() {
     drawChats();
     drawMessages();
+    drawUsers();
 }
 
 function openModal(name) {
@@ -222,28 +217,138 @@ function closeModal() {
     deleteChatId = null;
 }
 
-function createChat(title) {
-    const newChat = {
-        id: Date.now(),
-        title: title,
-        lastMessage: "Чат створено. Можна починати спілкування.",
-        time: "now",
-        unread: 0,
-        color: colors[chats.length % colors.length],
-        messages: [
-            {
-                name: "System",
-                avatar: "S",
-                time: "now",
-                text: "Чат створено. Можна починати спілкування.",
-                color: "navy"
-            }
-        ]
-    };
+function readSocketPacket(packet) {
+    if (packet === "2") {
+        socket.send("3");
+        return;
+    }
 
-    chats.unshift(newChat);
-    activeChat = newChat.id;
-    chatSearch.value = "";
+    if (packet.startsWith("0")) {
+        socket.send("40");
+        return;
+    }
+
+    if (packet.startsWith("40")) {
+        socketConnected = true;
+        if (pendingJoinChat) {
+            joinSocketRoom(pendingJoinChat);
+            pendingJoinChat = null;
+        }
+        return;
+    }
+
+    if (!packet.startsWith("42")) {
+        return;
+    }
+
+    const eventData = JSON.parse(packet.slice(2));
+    const eventName = eventData[0];
+    const data = eventData[1] || {};
+
+    if (eventName === "new_message") {
+        addSocketMessage(data);
+    }
+
+    if (eventName === "chat_deleted") {
+        loadChats();
+    }
+}
+
+function sendSocketEvent(name, data) {
+    if (!socket || !socketConnected) {
+        return false;
+    }
+
+    socket.send(`42${JSON.stringify([name, data])}`);
+    return true;
+}
+
+function joinSocketRoom(chatId) {
+    if (!sendSocketEvent("join_chat_room", { chatId: Number(chatId) })) {
+        pendingJoinChat = Number(chatId);
+    }
+}
+
+function addSocketMessage(data) {
+    const chat = chats.find((item) => item.id === data.chatId);
+    if (!chat) {
+        return;
+    }
+
+    data.message.my = data.message.userId === currentUserId;
+    chat.messages.push(data.message);
+    chat.lastMessage = data.lastMessage;
+
+    if (activeChat === data.chatId) {
+        messagesBlock.appendChild(makeMessage(data.message));
+        messagesBlock.scrollTop = messagesBlock.scrollHeight;
+    }
+
+    drawChats();
+}
+
+function connectSocket() {
+    if (socket) {
+        return;
+    }
+
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    socket = new WebSocket(`${protocol}://${window.location.host}/socket.io/?EIO=4&transport=websocket`);
+
+    socket.addEventListener("message", (event) => {
+        readSocketPacket(event.data);
+    });
+
+    socket.addEventListener("close", () => {
+        socket = null;
+        socketConnected = false;
+    });
+}
+
+function connectChat() {
+    if (socket) {
+        joinSocketRoom(activeChat);
+        return;
+    }
+
+    if (!activeChat) {
+        return;
+    }
+
+    pendingJoinChat = activeChat;
+    connectSocket();
+}
+
+function selectChat(chatId) {
+    activeChat = Number(chatId);
+    drawPage();
+    connectChat();
+}
+
+function loadChats() {
+    loading.hidden = false;
+
+    request("/api/chats/")
+        .then((data) => {
+            currentUserId = data.currentUserId;
+            chats = data.myChats || [];
+            otherChats = data.otherChats || [];
+
+            if (!chats.find((chat) => chat.id === activeChat)) {
+                activeChat = chats.length ? chats[0].id : null;
+            }
+
+            loading.hidden = true;
+            drawPage();
+            connectChat();
+        });
+}
+
+function createChat(title) {
+    return request("/api/chats/create/", {
+        method: "POST",
+        body: JSON.stringify({ title })
+    });
 }
 
 function deleteChat() {
@@ -251,11 +356,23 @@ function deleteChat() {
         return;
     }
 
-    chats = chats.filter((chat) => chat.id !== deleteChatId);
+    return request(`/api/chats/${deleteChatId}/delete/`, {
+        method: "DELETE"
+    }).then(() => {
+        if (activeChat === deleteChatId) {
+            activeChat = null;
+        }
+        loadChats();
+    });
+}
 
-    if (activeChat === deleteChatId) {
-        activeChat = chats.length ? chats[0].id : null;
-    }
+function joinChat(chatId) {
+    return request(`/api/chats/${chatId}/join/`, {
+        method: "POST"
+    }).then(() => {
+        activeChat = Number(chatId);
+        loadChats();
+    });
 }
 
 chatBlock.addEventListener("click", (event) => {
@@ -264,6 +381,7 @@ chatBlock.addEventListener("click", (event) => {
     const closeButton = event.target.closest("[data-close-modal]");
     const selectButton = event.target.closest("[data-select-chat]");
     const deleteButton = event.target.closest("[data-delete-chat]");
+    const joinButton = event.target.closest("[data-join-chat]");
     const confirmDelete = event.target.closest("[data-confirm-delete]");
 
     if (event.target.classList.contains("modal-backdrop") || closeButton) {
@@ -284,14 +402,7 @@ chatBlock.addEventListener("click", (event) => {
     }
 
     if (selectButton) {
-        activeChat = Number(selectButton.dataset.selectChat);
-
-        const chat = chats.find((item) => item.id === activeChat);
-        if (chat) {
-            chat.unread = 0;
-        }
-
-        drawPage();
+        selectChat(selectButton.dataset.selectChat);
         return;
     }
 
@@ -301,10 +412,13 @@ chatBlock.addEventListener("click", (event) => {
         return;
     }
 
+    if (joinButton) {
+        joinChat(joinButton.dataset.joinChat);
+        return;
+    }
+
     if (confirmDelete) {
-        deleteChat();
-        closeModal();
-        drawPage();
+        deleteChat().then(closeModal);
     }
 });
 
@@ -322,22 +436,39 @@ createForm.addEventListener("submit", (event) => {
     const title = createForm.chatName.value.trim();
 
     if (!title) {
+        createError.textContent = "Введіть назву чату.";
         createError.hidden = false;
         createForm.chatName.focus();
         return;
     }
 
-    createChat(title);
-    createError.hidden = true;
-    closeModal();
-    drawPage();
+    createChat(title).then((data) => {
+        if (!data.success) {
+            createError.textContent = data.error || "Не вдалося створити чат.";
+            createError.hidden = false;
+            return;
+        }
+
+        activeChat = data.chat.id;
+        createError.hidden = true;
+        closeModal();
+        loadChats();
+    });
 });
 
 messageForm.addEventListener("submit", (event) => {
     event.preventDefault();
+
+    const text = messageInput.value.trim();
+    if (!text) {
+        return;
+    }
+
+    if (!sendSocketEvent("send_message", { chatId: activeChat, text })) {
+        return;
+    }
+
+    messageInput.value = "";
 });
 
-setTimeout(() => {
-    loading.hidden = true;
-    drawPage();
-}, 400);
+loadChats();

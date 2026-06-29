@@ -273,6 +273,19 @@ button {
     padding: 0 0 16px;
 }
 
+.available-chats {
+    border-top: 1px solid var(--line);
+    padding-top: 12px;
+}
+
+.available-chats h3 {
+    margin: 0;
+    padding: 0 24px 10px;
+    color: #5f6877;
+    font-size: 13px;
+    font-weight: 700;
+}
+
 .chat-item {
     display: grid;
     grid-template-columns: 42px minmax(0, 1fr) auto;
@@ -389,6 +402,21 @@ button {
 .delete-chat-button:hover {
     background: #fee2e2;
     color: var(--danger);
+}
+
+.join-chat-button {
+    min-height: 28px;
+    border: 1px solid var(--blue);
+    border-radius: 7px;
+    background: #fff;
+    color: var(--blue);
+    padding: 0 10px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.join-chat-button:hover {
+    background: var(--blue-soft);
 }
 
 .conversation {

@@ -88,6 +88,11 @@
 
             <p class="not-found-state" data-not-found-state hidden>Чати не знайдено</p>
             <ul class="chat-list" data-chat-list aria-label="Доступні чати"></ul>
+
+            <div class="available-chats" data-available-wrap hidden>
+                <h3>Доступні чати</h3>
+                <ul class="chat-list" data-available-list aria-label="Доступні чати"></ul>
+            </div>
         </aside>
 
         <section class="conversation" aria-label="Активний чат">
@@ -116,7 +121,7 @@
 
             <form class="message-form" data-message-form>
                 <button class="emoji-button" type="button" aria-label="Емодзі">☺</button>
-                <input type="text" placeholder="Введіть повідомлення..." aria-label="Текст повідомлення">
+                <input type="text" placeholder="Введіть повідомлення..." aria-label="Текст повідомлення" data-message-input>
                 <button class="send-button" type="submit" aria-label="Надіслати повідомлення">
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                         <path d="m22 2-7 20-4-9-9-4 20-7Z"/>
